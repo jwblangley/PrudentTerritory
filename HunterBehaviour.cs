@@ -7,7 +7,7 @@ public class HunterBehaviour : DroneBehaviour {
     UnityEngine.AI.NavMeshAgent navAgent;
     public float gaurdRotateSpeed, keepDistanceValue, shootCooldown;
     public Vector3 targetLoc;
-    public bool canShoot=true;
+    bool canShoot = true;
     public AudioClip updatedLocTone, laser;
     private ParticleSystem laserSystem;
 

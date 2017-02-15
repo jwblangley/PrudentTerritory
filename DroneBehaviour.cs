@@ -2,7 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 
-public class DroneBehaviour : MonoBehaviour {
+public abstract class DroneBehaviour : MonoBehaviour {
     public GameObject target;
     public float droneHealth;
     public GameObject explosionPrefab;
