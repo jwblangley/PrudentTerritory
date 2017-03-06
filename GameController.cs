@@ -8,7 +8,6 @@ using UnityEngine.UI;
 public class GameController : MonoBehaviour
 {
     public bool traversalOnly;
-    // Use this for initialization
     public GameObject neutralNode;
     static System.Random rand = new System.Random();
 
@@ -70,16 +69,15 @@ public class GameController : MonoBehaviour
         OST = background.GetComponent<AudioSource>();
     }
 
-    public static float difficultyCalc(NodeInstanceHandler hitNode, bool blue)
+    public static float difficultyCalc(NodeInstanceHandler hitNode, bool blue, bool traversalOnly=false)
     {
         if (blue && NodeArray.Where(x => !x.GetComponent<NodeInstanceHandler>().node.isBlue && !x.GetComponent<NodeInstanceHandler>().node.isNeutral).ToArray().Count() == 1 /*last red*/ && hitNode == currentCPUsNode)
         {
-            return 0.95f;
+            return traversalOnly?0.8f: 0.95f;
         }
         else if (!blue && NodeArray.Where(x => x.GetComponent<NodeInstanceHandler>().node.isBlue).ToArray().Count() == 1 /*last blue*/ && hitNode == currentPlayersNode)
         {
-            Debug.Log("last blue");
-            return 0.95f;
+            return traversalOnly?0.8f:0.95f;
         }
         else
         {
@@ -133,7 +131,7 @@ public class GameController : MonoBehaviour
                         {
                             if (traversalOnly)
                             {
-                                playerWon = (float)Random.value > difficultyCalc(hitNode, true);
+                                playerWon = hitNode.node.isBlue|| (float)Random.value > difficultyCalc(hitNode, true, true);
                                 backFromScene = true;
                             }
                             else if (!hitNode.node.isBlue)
@@ -260,8 +258,7 @@ public class GameController : MonoBehaviour
                 }
 
                 //Run Battle to see if Red wins
-                CPUWon = (float)Random.value > difficultyCalc(redHit, false);
-                CPUWon = CPUWon || (!redHit.node.isBlue && !redHit.node.isNeutral);
+                CPUWon = (float)Random.value > difficultyCalc(redHit, false, traversalOnly) || (!redHit.node.isBlue && !redHit.node.isNeutral);
 
                 if (CPUWon)
                 {
