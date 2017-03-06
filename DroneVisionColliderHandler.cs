@@ -3,7 +3,7 @@ using System.Collections;
 
 public class DroneVisionColliderHandler : MonoBehaviour {
 
-
+    //Pass information to parent class when player enters/exits the drones 'vision'
     void OnTriggerEnter(Collider other)
     {
         if (other.gameObject.name == "Player")

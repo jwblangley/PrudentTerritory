@@ -7,6 +7,7 @@ using UnityEngine.UI;
 
 public class GameController : MonoBehaviour
 {
+    //Set up variables (many will be assigned through the editor)
     public bool traversalOnly;
     public GameObject neutralNode;
     static System.Random rand = new System.Random();
@@ -48,6 +49,7 @@ public class GameController : MonoBehaviour
 
     void Start()
     {
+        //Sets up display, generates graph and initialised player and CPU's node variables
         Application.targetFrameRate = 80;
         background.transform.localEulerAngles = new Vector3(0f, 180 * (rand.Next(0, 2)), 0f);
         generateAllGraph();
@@ -71,6 +73,8 @@ public class GameController : MonoBehaviour
 
     public static float difficultyCalc(NodeInstanceHandler hitNode, bool blue, bool traversalOnly=false)
     {
+        //returns a float between 0 and 1 determining the probability of success for the CPU and the difficulty of the level for the player
+        //based on surrounding nodes
         if (blue && NodeArray.Where(x => !x.GetComponent<NodeInstanceHandler>().node.isBlue && !x.GetComponent<NodeInstanceHandler>().node.isNeutral).ToArray().Count() == 1 /*last red*/ && hitNode == currentCPUsNode)
         {
             return traversalOnly?0.8f: 0.95f;
@@ -90,9 +94,10 @@ public class GameController : MonoBehaviour
         }
     }
 
-    
+
     void weighting(ref List<NodeClass> adjacents, bool blue)
     {
+        //Sets weights of surrounding nodes so that CPU can make a choice on the best node to pick
         foreach (GameObject node in NodeArray)
         {
             node.GetComponent<NodeInstanceHandler>().node.blueWeight = 0;
@@ -110,8 +115,10 @@ public class GameController : MonoBehaviour
             }
         }
     }
+
     NodeInstanceHandler hitNode;
-    // Update is called once per frame
+
+    // Update is called once per frame. Most of the handling is done here
     void Update()
     {
         if (!gameOver)
@@ -119,24 +126,25 @@ public class GameController : MonoBehaviour
 
             if (isPlayersTurn)
             {
-                if (Input.GetMouseButtonDown(0))
+                if (Input.GetMouseButtonDown(0)) //Clicked this frame
                 {
                     Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
                     RaycastHit hit;
 
-                    if (Physics.Raycast(ray, out hit, 100))
+                    if (Physics.Raycast(ray, out hit, 100)) //Clicked on a gameobject with a collider (a node)
                     {
                         hitNode = hit.transform.gameObject.GetComponent<NodeInstanceHandler>();
                         if (currentPlayersNode.node.adjacents.Contains(hitNode.node))
                         {
                             if (traversalOnly)
                             {
+                                //probability
                                 playerWon = hitNode.node.isBlue|| (float)Random.value > difficultyCalc(hitNode, true, true);
                                 backFromScene = true;
                             }
                             else if (!hitNode.node.isBlue)
                             {
-                                //Run Battle to see if win
+                                //Pause background music, store all current gameobjects (the graph) and load the shooter
                                 audioTime = OST.time;
                                 OST.Stop();
                                 holder = (GameObject[])Object.FindObjectsOfType(typeof(GameObject));
@@ -150,6 +158,7 @@ public class GameController : MonoBehaviour
                             }
                             else
                             {
+                                //Traversal between own nodes is free
                                 playerWon = true;
                                 backFromScene = true;
                             }
@@ -157,11 +166,12 @@ public class GameController : MonoBehaviour
                     }
                 }
 
-                if (!backFromScene) { return; }
+                if (!backFromScene) { return; } //Wait until Player has finished the shooter
                 backFromScene = false;
                 Cursor.visible = true;
                 Cursor.lockState = CursorLockMode.None;
                 //we're back!
+
                 if (!traversalOnly)
                 {
                     OST.time = audioTime;
@@ -169,7 +179,7 @@ public class GameController : MonoBehaviour
                 }
                 if (playerWon)
                 {
-                    //set blue
+                    //set selected node to blue and move to it
                     hitNode.setBlue();
                     foreach (fullArcObject arc1 in arcArray)
                     {
@@ -180,12 +190,11 @@ public class GameController : MonoBehaviour
                         }
                     }
 
-
                     currentPlayersNode = hitNode;
                     blueRing.transform.position = currentPlayersNode.transform.position;
 
 
-                    //set between red and blue to green
+                    //set arcs that are between red and blue nodes to green
                     foreach (fullArcObject arc1 in arcArray)
                     {
                         if ((arc1.arcNode.node1.GetComponent<NodeInstanceHandler>().node.isBlue && !(arc1.arcNode.node2.GetComponent<NodeInstanceHandler>().node.isBlue || arc1.arcNode.node2.GetComponent<NodeInstanceHandler>().node.isNeutral)) || (arc1.arcNode.node2.GetComponent<NodeInstanceHandler>().node.isBlue && !(arc1.arcNode.node1.GetComponent<NodeInstanceHandler>().node.isBlue || arc1.arcNode.node1.GetComponent<NodeInstanceHandler>().node.isNeutral)))
@@ -195,33 +204,38 @@ public class GameController : MonoBehaviour
                         }
                     }
 
+                    //Check if the game has been won
                     gameOver = checkWin(out winner);
                     if (!gameOver)
                     {
                         if (hitNode == currentCPUsNode)
                         {
+                            //reposition CPU's node if it has been taken
                             currentCPUsNode = NodeClass.nearestAvailable(currentCPUsNode.node, false, false).NIH;
                             redRing.transform.position = currentCPUsNode.transform.position;
                         }
                     }
                     else
                     {
+                        //Display win and end game
                         winnerUI.GetComponent<Text>().text = winner + "WON!";
                         winnerUI.SetActive(true);
                         Time.timeScale = 0;
                     }
-                    
+
                 }
                 foreach (GameObject obj in NodeArray)
                 {
+                  //Change all nodes to the default size
                     obj.transform.localScale = new Vector3(1, 1, 1);
                 }
+                //end player's turn and pause
                 isPlayersTurn = false;
                 StartCoroutine(waitForCPUTurn(Random.Range(0.8f, 2f)));
             }
 
 
-            
+
             //CPU's Turn
             if (cpuReady)
             {
@@ -246,7 +260,7 @@ public class GameController : MonoBehaviour
                     {
                         //Djikstra's to nearest
                         redHit = NodeClass.nextInDjikstras(currentCPUsNode.node, NodeClass.nearestAvailable(currentCPUsNode.node, true, true), false).NIH;
-                        
+
                     }
                 }
 
@@ -257,7 +271,7 @@ public class GameController : MonoBehaviour
                     return;
                 }
 
-                //Run Battle to see if Red wins
+                //Run probability test to see if Red wins
                 CPUWon = (float)Random.value > difficultyCalc(redHit, false, traversalOnly) || (!redHit.node.isBlue && !redHit.node.isNeutral);
 
                 if (CPUWon)
@@ -284,11 +298,13 @@ public class GameController : MonoBehaviour
                             arc1.arcObject.GetComponent<Renderer>().material = greenMaterial;
                         }
                     }
+                    //check if game has been won
                     gameOver = checkWin(out winner);
                     if (!gameOver)
                     {
                         if (redHit == currentPlayersNode)
                         {
+                            //Reposition current blue node if it has been taken
                             currentPlayersNode = NodeClass.nearestAvailable(currentPlayersNode.node, true, false).NIH;
                             blueRing.transform.position = currentPlayersNode.transform.position;
                         }
@@ -305,8 +321,10 @@ public class GameController : MonoBehaviour
                     redRing.transform.position = currentCPUsNode.gameObject.transform.position;
                 }
 
+                //indicate end of CPU's turn
                 isPlayersTurn = true;
 
+                //Enlarge nodes available for the player to move to
                 foreach (NodeClass node in currentPlayersNode.node.adjacents)
                 {
                     node.NIH.gameObject.transform.localScale = new Vector3(1.3f, 1.3f, 1.3f);
@@ -316,6 +334,7 @@ public class GameController : MonoBehaviour
     }
     bool checkWin(out string winner)
     {
+        //Checks if the game has been won by counting the number of nodes of each colour
         winner = "";
         if (NodeArray.Where(x => x.GetComponent<NodeInstanceHandler>().node.isBlue).ToArray().Count() == 0 /*red win*/ || NodeArray.Where(x => !x.GetComponent<NodeInstanceHandler>().node.isBlue && !x.GetComponent<NodeInstanceHandler>().node.isNeutral).ToArray().Count() == 0 /*blue win*/)
         {
@@ -335,13 +354,17 @@ public class GameController : MonoBehaviour
             return false;
         }
     }
+
     void generateAllGraph()
     {
+        //Generates the graph
         do
         {
-            pointArray = new Point[1000];
+            //Regenerate node locations until it meets the set requirements
+            pointArray = new Point[1000]; //declare this so it can be used by the recursive algorithm
             pointGenCount = 0;
-            generateCoordinates(new Rect(0, 0, posHalfWidth * 2, posHalfHeight * 2));
+            generateCoordinates(new Rect(0, 0, posHalfWidth * 2, posHalfHeight * 2)); //Recursive algorithm to fill pointArray with node locations
+            //tidy pointArray
             pointArray = pointArray.Where(i => i.x > 0 && i.x < posHalfWidth * 2 && i.y > 0 && i.y < posHalfHeight * 2).ToArray(); //remove any on the border
             pointArray = pointArray.Select(i => new Point(i.x - posHalfWidth, i.y - posHalfHeight)).ToArray(); //map to centre of (0,0)
             pointArray = pointArray.Select(i => new Point(roundToNearest(i.x, pointGenRound), roundToNearest(i.y, pointGenRound))).ToArray(); //remove unecessary precision and delete nodes that are much too close
@@ -349,8 +372,9 @@ public class GameController : MonoBehaviour
 
         } while (pointArray.Length < minNodeCount);
 
-        NodeArray = new GameObject[pointArray.Length + 2];
+        NodeArray = new GameObject[pointArray.Length + 2]; //blue root and red root as well as other points
 
+        //Set up nodes
         GameObject blueRoot = (GameObject)Instantiate(neutralNode, new Vector3(-12.5f, 0, 0), Quaternion.identity);
         blueRoot.name = "Node_BlueRoot";
         blueRoot.GetComponent<NodeInstanceHandler>().setBlue();
@@ -361,13 +385,14 @@ public class GameController : MonoBehaviour
         redRoot.GetComponent<NodeInstanceHandler>().setRed();
         NodeArray[1] = redRoot;
 
-        for (int i = 0; i < NodeArray.Length - 2; i++)
+        for (int i = 2; i < NodeArray.Length; i++)
         {
-            NodeArray[i + 2] = (GameObject)Instantiate(neutralNode, new Vector3(pointArray[i].x, 0, pointArray[i].y), Quaternion.identity);
-            NodeArray[i + 2].name = "Node_" + (i + 1);
+            NodeArray[i] = (GameObject)Instantiate(neutralNode, new Vector3(pointArray[i-2].x, 0, pointArray[i-2].y), Quaternion.identity);
+            NodeArray[i].name = "Node_" + (i -1);
         }
 
-        arcNodes[] possibleArcs = new arcNodes[NodeArray.Length * (NodeArray.Length - 1) / 2];
+        arcNodes[] possibleArcs = new arcNodes[NodeArray.Length * (NodeArray.Length - 1) / 2]; //array to hold all possible arcs between nodes (connected graph)
+        //fill possibleArcs
         int counter = 0;
         for (int i = 0; i < NodeArray.Length; i++)
         {
@@ -377,7 +402,7 @@ public class GameController : MonoBehaviour
                 counter++;
             }
         }
-        arcArray = new fullArcObject[NodeArray.Length * (NodeArray.Length - 1) / 2];
+        arcArray = new fullArcObject[NodeArray.Length * (NodeArray.Length - 1) / 2]; //for used arcs
         int arcCounter = 0;
 
         //Minimum spanning tree ensures all nodes are connected and reduces chance of crosses
@@ -389,7 +414,7 @@ public class GameController : MonoBehaviour
             bool isWholeCyclic = false;
             foreach (GameObject tempNode in NodeArray)
             {
-                if (NodeClass.isCyclic(tempNode.GetComponent<NodeInstanceHandler>().node, new List<NodeClass>()))
+                if (NodeClass.isCyclic(tempNode.GetComponent<NodeInstanceHandler>().node, new List<NodeClass>())) //recursive algorithm for testing whether a graph is cyclic
                 {
                     isWholeCyclic = true;
                     break;
@@ -402,6 +427,7 @@ public class GameController : MonoBehaviour
             }
             else
             {
+                //Create and render the arc
                 GameObject ArcObject = (GameObject)Instantiate(arcPrefab, new Vector3(arc.midPoint.x, 0, arc.midPoint.y), Quaternion.identity);
                 ArcObject.name = "Arc_" + arc.node1.name.Split('_')[1] + "-" + arc.node2.name.Split('_')[1];
                 LineRenderer tempLine = ArcObject.GetComponent<LineRenderer>();
@@ -417,7 +443,7 @@ public class GameController : MonoBehaviour
             }
         }
 
-        //Fill out other short arcs
+        //Fill out some other short arcs
         arcNodes[] remainingArcs = possibleArcs.Where(x => !arcArray.Select(y => y.arcNode).ToArray().Contains(x)).OrderBy(z => z.physicalLength).ToArray();
         if (remainingArcs.Length > 8)
         {
@@ -425,13 +451,14 @@ public class GameController : MonoBehaviour
             {
                 arcNodes arc = remainingArcs[i + Random.Range(0, 1)];
 
-                bool valid = true; //checking if arcs overlap
+                bool valid; //check whether arc crosses through a different node that it shouldn't
                 Vector3 heading = arc.node2.transform.position - arc.node1.transform.position;
                 Vector3 direction = heading / heading.magnitude;
                 valid = !Physics.Raycast(arc.node1.transform.position, direction, Vector3.Distance(arc.node1.transform.position, arc.node2.transform.position) - 1f);
 
                 if (valid)
                 {
+                    //Create and render the arc
                     GameObject ArcObject = (GameObject)Instantiate(arcPrefab, new Vector3(arc.midPoint.x, 0, arc.midPoint.y), Quaternion.identity);
                     ArcObject.name = "Arc_" + arc.node1.name.Split('_')[1] + "-" + arc.node2.name.Split('_')[1];
                     LineRenderer tempLine = ArcObject.GetComponent<LineRenderer>();
@@ -453,13 +480,12 @@ public class GameController : MonoBehaviour
         System.Array.Resize(ref arcArray, arcCounter);
     }
 
-    private int counter = 0;
     void generateCoordinates(Rect box)
     {
-
-        if ((box.width - (2f * pointGenMinBoundary)) > 1 && (box.height - (2f * pointGenMinBoundary)) > 1)
+        //Recursive algorithm to generate coordinates of possible nodes by splitting an initial rectangle into smaller and smaller rectangles
+        if ((box.width - (2f * pointGenMinBoundary)) > 1 && (box.height - (2f * pointGenMinBoundary)) > 1) //new box isn't too small
         {
-            counter++;
+            //Add coordinates of corners to pointArray
             if (!pointArray.Contains(new Point(box.x, box.y)))
             {
                 pointArray[pointGenCount] = new Point(box.x, box.y); //top left
@@ -481,15 +507,18 @@ public class GameController : MonoBehaviour
                 pointGenCount++;
             }
 
+            //split box randomly within a range
             float xCross = Random.Range(pointGenMinBoundary, box.width - pointGenMinBoundary);
             float yCross = Random.Range(pointGenMinBoundary, box.height - pointGenMinBoundary);
 
+            //recursion
             generateCoordinates(new Rect(box.x, box.y, xCross, yCross)); //Top Left
             generateCoordinates(new Rect(box.x + xCross, box.y, box.width - xCross, yCross));//Top Right
             generateCoordinates(new Rect(box.x, box.y + yCross, xCross, box.height - yCross)); //Bottom Left
             generateCoordinates(new Rect(box.x + xCross, box.y + yCross, box.width - xCross, box.height - yCross)); //Bottom Right
         }
     }
+
     public float roundToNearest(float input, float to)
     {
         return Mathf.Round(input / to) * to;
@@ -497,6 +526,7 @@ public class GameController : MonoBehaviour
 
     IEnumerator waitForCPUTurn(float seconds)
     {
+        //Waits in a new thread so as to not freeze game
         cpuReady = false;
         yield return new WaitForSeconds(seconds);
         cpuReady = true;
@@ -516,6 +546,7 @@ public class GameController : MonoBehaviour
 
     public struct arcNodes
     {
+        //struct to hold two nodes
         public float physicalLength;
         public Point midPoint;
         public GameObject node1, node2;
@@ -524,15 +555,17 @@ public class GameController : MonoBehaviour
             this.node1 = node1;
             this.node2 = node2;
             midPoint = new Point((node1.transform.position.x + node2.transform.position.x) / 2, (node1.transform.position.z + node2.transform.position.z) / 2);
+
             physicalLength = Mathf.Sqrt(
             Mathf.Pow(node1.transform.position.x - node2.transform.position.x, 2) +
             Mathf.Pow(node1.transform.position.z - node2.transform.position.z, 2)
-            );
+            ); //Pythagoras
         }
     }
 
     public struct fullArcObject
     {
+        //struct to hold rendered line and arc gameobject
         public arcNodes arcNode;
         public GameObject arcObject;
         public LineRenderer line;

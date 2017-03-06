@@ -5,7 +5,6 @@ using UnityEngine.UI;
 
 public class PlayerManager : MonoBehaviour {
 
-    // Use this for initialization
     private static GameObject activate=null;
     public Light weaponLight;
     public ParticleSystem laserProducer;
@@ -27,27 +26,32 @@ public class PlayerManager : MonoBehaviour {
 
 	// Update is called once per frame
 	void Update () {
-        if (Input.GetButtonDown("Interact") && Time.timeScale != 0)
+        //Input handling
+
+
+        if (Input.GetButtonDown("Interact") && Time.timeScale != 0 /*not paused*/)
         {
-            if (activate != null && !AttackControllerScript.consoles[activate])
+            if (activate != null && !AttackControllerScript.consoles[activate]) //Nearby console needs activating
             {
                 damage(-30f); //heal
+                //Activate Console
                 AttackControllerScript.consoles[activate] = true;
                 activate.GetComponentInChildren<Light>().color = new Color(0, 128, 0);
                 activate.GetComponentInChildren<Light>().intensity = 0.2f;
                 activate.GetComponentInChildren<Light>().range = 2f;
                 activate.GetComponent<AudioSource>().Play();
                 GameObject.Find("ConsoleCounter").GetComponent<Text>().text = int.Parse(GameObject.Find("ConsoleCounter").GetComponent<Text>().text[0].ToString())+1 + "/" + AttackControllerScript.consoles.Count();
-                
+
             }
         }if (Input.GetKeyDown(KeyCode.F) && Time.timeScale!=0)
         {
-            weaponLight.gameObject.SetActive(!weaponLight.gameObject.activeSelf);
+            weaponLight.gameObject.SetActive(!weaponLight.gameObject.activeSelf); //Illuminate flashlight
         }
         if (Input.GetKeyDown(KeyCode.Q) && Time.timeScale != 0)
         {
             if (canJet)
             {
+                //Use jetpack and disable further jetpacks until jetpack cooldown completed
                 jetPackUI.GetComponentInChildren<Image>().canvasRenderer.SetAlpha(0f);
                 AS.PlayOneShot(jetPackClip);
                 StartCoroutine(jetPackDelay());
@@ -56,9 +60,11 @@ public class PlayerManager : MonoBehaviour {
         }
         if (Input.GetButtonDown("Fire") && canShoot && Time.timeScale != 0)
         {
-            coolDown.GetComponent<Image>().canvasRenderer.SetAlpha(1f);
-            StartCoroutine(shootDelay());
-            laserProducer.Play();
+            coolDown.GetComponent<Image>().canvasRenderer.SetAlpha(1f); //Show shoot cooldown
+            canShoot = false; //disable shooting until cooldown completed
+            StartCoroutine(shootDelay()); //begin shoot cooldown
+            laserProducer.Play(); //fire the weapon
+            //Change the pitch of the weapon to avoid monotony
             if (Random.value < 0.5)
             {
                 AS.pitch += 0.1f;
@@ -69,7 +75,7 @@ public class PlayerManager : MonoBehaviour {
             }
             AS.pitch = Mathf.Clamp(AS.pitch, 1f, 2f);
             AS.Play();
-            canShoot = false;
+
         }
         if (Input.GetButtonDown("Zoom") && Time.timeScale != 0)
         {
@@ -79,6 +85,7 @@ public class PlayerManager : MonoBehaviour {
 
         if (Input.GetKeyDown(KeyCode.P))
         {
+            //Pause
             Time.timeScale = Time.timeScale == 0 ? 1 : 0;
             pauseUI.SetActive(Time.timeScale == 0);
         }
@@ -87,7 +94,6 @@ public class PlayerManager : MonoBehaviour {
 
     void FixedUpdate()
     {
-
         if (isJet)
         {
             GetComponent<Rigidbody>().AddForce(jetPackPower * Vector3.up);
@@ -96,7 +102,7 @@ public class PlayerManager : MonoBehaviour {
 
     void OnParticleCollision(GameObject other)
     {
-        if (other.name != "Laser")
+        if (other.name != "Laser") //not friendly fire, but any other laser
         {
             damage(1);
         }
@@ -104,6 +110,7 @@ public class PlayerManager : MonoBehaviour {
 
     void OnTriggerEnter(Collider other)
     {
+        //Slow down on enterring water
         if (other.gameObject.name == "Water4Simple")
         {
             UnityStandardAssets.Characters.FirstPerson.RigidbodyFirstPersonController.MovementSettings.ForwardSpeed /= 3;
@@ -111,11 +118,13 @@ public class PlayerManager : MonoBehaviour {
             UnityStandardAssets.Characters.FirstPerson.RigidbodyFirstPersonController.MovementSettings.StrafeSpeed /= 3;
         }else if (other.gameObject.name == "Console")
         {
+            //Set the activate variable to the nearby console
             activate = other.gameObject;
         }
     }
     void OnTriggerExit(Collider other)
     {
+        //Return to normal speed when exiting water
         if (other.gameObject.name == "Water4Simple")
         {
             UnityStandardAssets.Characters.FirstPerson.RigidbodyFirstPersonController.MovementSettings.ForwardSpeed *= 3;
@@ -124,9 +133,12 @@ public class PlayerManager : MonoBehaviour {
         }
         else if (other.gameObject.name == "Console")
         {
+            //The console is out of range again so cannot be activated
             activate = null;
         }
     }
+
+    //Delays without freezing the game
     IEnumerator shootDelay()
     {
         coolDown.GetComponent<Image>().CrossFadeAlpha(0.01f, shootCooldown, false);
@@ -150,6 +162,7 @@ public class PlayerManager : MonoBehaviour {
     }
     public void damage(float damageValue)
     {
+        //decrease health and affect HUD
         health -= damageValue;
         health = Mathf.Clamp(health, -20f, 100f); //stops heal going too far
         ouch.GetComponent<Image>().CrossFadeAlpha( 1- health / 100f, 0.1f, false);

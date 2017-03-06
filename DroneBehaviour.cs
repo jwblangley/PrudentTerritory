@@ -8,9 +8,10 @@ public abstract class DroneBehaviour : MonoBehaviour {
     public GameObject explosionPrefab;
     public bool canSeePlayer = false, isGaurd;
     public static Vector3 lastKnownPlayerLoc=new Vector3(9999,9999,9999);
-    
+
     // Update is called once per frame
     public virtual void Update () {
+        //Destroy self when health reaches zero and change intensity of vision if player is within range
         if (droneHealth <= 0)
         {
             destruct(1);
@@ -21,7 +22,7 @@ public abstract class DroneBehaviour : MonoBehaviour {
 
     void OnParticleCollision(GameObject other)
     {
-        if (other.name != "RedLaser")
+        if (other.name != "RedLaser") //if shot (not by a drone)
         {
             transform.LookAt(target.transform.position);
             droneHealth--;
@@ -30,6 +31,7 @@ public abstract class DroneBehaviour : MonoBehaviour {
 
     public void destruct(int damageMultiplier)
     {
+        //Explode and damage player if they're too close
         GameObject explosion = (GameObject)Instantiate(explosionPrefab, gameObject.transform.position, Quaternion.identity);
         explosion.transform.localScale = new Vector3(damageMultiplier, damageMultiplier, damageMultiplier);
         target.GetComponent<PlayerManager>().damage(5 * damageMultiplier * (int)Mathf.Clamp(8 - Vector3.Distance(target.transform.position, transform.position), 0, 8));
@@ -37,6 +39,6 @@ public abstract class DroneBehaviour : MonoBehaviour {
         return;
     }
 
-    
-    
+
+
 }

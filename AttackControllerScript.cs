@@ -16,12 +16,14 @@ public class AttackControllerScript : MonoBehaviour
     public GameObject ScoutDrone, KamikazeDrone, HunterDrone;
 
     private bool cameraFalling = false;
-    
-    // Use this for initialization
+
+
     void Start()
+    //Run when script is instantiated
     {
         RaycastHit hit;
 
+        //Set random location for player on the terrain surface
         Vector3 playerLoc = new Vector3(Random.Range(-200f, 200f), 1000, Random.Range(-200f, 200f));
         if (Physics.Raycast(playerLoc, -Vector3.up, out hit))
         {
@@ -29,20 +31,22 @@ public class AttackControllerScript : MonoBehaviour
         }
         Player.transform.position = playerLoc;
 
+        //Set player movement variables
         UnityStandardAssets.Characters.FirstPerson.RigidbodyFirstPersonController.MovementSettings.ForwardSpeed = 6;
         UnityStandardAssets.Characters.FirstPerson.RigidbodyFirstPersonController.MovementSettings.BackwardSpeed = 3;
         UnityStandardAssets.Characters.FirstPerson.RigidbodyFirstPersonController.MovementSettings.StrafeSpeed = 3;
         UnityStandardAssets.Characters.FirstPerson.RigidbodyFirstPersonController.MovementSettings.RunMultiplier = 1.7f;
 
-        
+
         NumOfConsoles = (int)Mathf.Clamp((GameController.difficulty * 10f) + (int)Random.Range(-1, 1), 1, 10);
-        consoles = new Dictionary<GameObject, bool>();
+        consoles = new Dictionary<GameObject, bool>(); //Keeps track of which consoles have been activated
         GameObject.Find("ConsoleCounter").GetComponent<Text>().text = "0/" + NumOfConsoles;
 
+        //Spawns the set number of consoles in random locations on the surface of the terrain
         for (int i = 0; i < NumOfConsoles; i++)
         {
             Vector2 gridLoc = new Vector2(Random.Range(-200f, 200f), Random.Range(-200f, 200f));
-            float height = 5f;
+            float height;
             if (Physics.Raycast(new Vector3(gridLoc.x, 1000, gridLoc.y), -Vector3.up, out hit))
             {
                 height = 1000 - hit.distance;
@@ -53,7 +57,7 @@ public class AttackControllerScript : MonoBehaviour
             tempObj.name = "Console";
             consoles.Add(tempObj, false);
 
-            //spawn Kamikazes or Hunters at consoles
+            //spawn Kamikazes or Hunters at consoles as gaurds
             if (Random.Range(0f, 1f) < GameController.difficulty)
             {
                 GameObject tempDrone = (GameObject)Instantiate((Random.value < 0.5f) ? KamikazeDrone : HunterDrone, tempObj.transform.position + new Vector3(1, 0, 1), Quaternion.identity);
@@ -64,7 +68,7 @@ public class AttackControllerScript : MonoBehaviour
         }
 
 
-        //make Scouts
+        //Spawn Scouts
         for (int i = 0; i<Random.Range(80*GameController.difficulty,150*GameController.difficulty); i++)
         {
             //set destinations
@@ -74,7 +78,7 @@ public class AttackControllerScript : MonoBehaviour
             {
                 point1.y = 1000 - hit.distance-3;
             }
-            
+
             if (Physics.Raycast(point2, -Vector3.up, out hit))
             {
                 point2.y = 1000 - hit.distance-3;
@@ -87,7 +91,7 @@ public class AttackControllerScript : MonoBehaviour
             tempDrone.GetComponent<DroneBehaviour>().isGaurd = false;
         }
 
-        //make Kamikazes
+        //Spawn Kamikazes
         for (int i = 0; i < Random.Range(18*GameController.difficulty,40*GameController.difficulty); i++)
         {
             Vector3 point1 = new Vector3(Random.Range(-200f, 200f), 1000, Random.Range(-200f, 200f));
@@ -101,7 +105,7 @@ public class AttackControllerScript : MonoBehaviour
             tempDrone.GetComponent<DroneBehaviour>().isGaurd = false;
         }
 
-        //make Hunters
+        //Spawn Hunters
         for (int i = 0; i < Random.Range(15 * GameController.difficulty, 35 * GameController.difficulty); i++)
         {
             Vector3 point1 = new Vector3(Random.Range(-200f, 200f), 1000, Random.Range(-200f, 200f));
@@ -120,19 +124,10 @@ public class AttackControllerScript : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        float distance = 250f;
-        foreach (GameObject tempConsole in consoles.Keys)
-        {
-            if (!consoles[tempConsole])
-            {
-                distance = Mathf.Min(distance, Vector3.Distance(Player.transform.position, tempConsole.transform.position));
-            }
-        }
-        GameObject.Find("CloseSlider").GetComponent<Slider>().value = Mathf.Clamp(Mathf.RoundToInt((200 - distance) / 10), 0, 20);
 
-
-        if (consoles.Keys.Where(x => !consoles[x]).Count() == 0)
+        if (consoles.Keys.Where(x => !consoles[x]).Count() == 0) //All consoles activated
         {
+            //Return to graph
             GameController.playerWon = true;
             GameController.backFromScene = true;
             SceneManager.LoadScene("blank");
@@ -140,14 +135,14 @@ public class AttackControllerScript : MonoBehaviour
             {
                 item.SetActive(true);
             }
-        }else if (Player.GetComponent<PlayerManager>().health <= 0) //Death
+        }else if (Player.GetComponent<PlayerManager>().health <= 0) // Player Dies
         {
             cameraFalling = true;
         }
-        GetComponent<AudioSource>().volume = (100f - Player.GetComponent<PlayerManager>().health) / 100f;
 
-        if (cameraFalling)
+        if (cameraFalling) //Player has run out of health
         {
+            //Fall animation then return to graph
             if (Player.GetComponentInChildren<Camera>().fieldOfView <= 0f)
             {
                 cameraFalling = false;
@@ -165,6 +160,21 @@ public class AttackControllerScript : MonoBehaviour
                 Player.GetComponentInChildren<Camera>().fieldOfView -= fallSpeed;
             }
         }
+
+        // Update the console proximity reading for the HUD
+        float distance = 250f;
+        foreach (GameObject tempConsole in consoles.Keys)
+        {
+            if (!consoles[tempConsole]) //console isn't activated
+            {
+                distance = Mathf.Min(distance, Vector3.Distance(Player.transform.position, tempConsole.transform.position));
+            }
+        }
+        GameObject.Find("CloseSlider").GetComponent<Slider>().value = Mathf.Clamp(Mathf.RoundToInt((200 - distance) / 10), 0, 20);
+
+        //Make heartbeat audio inversely proportional to the health of the player
+        GetComponent<AudioSource>().volume = (100f - Player.GetComponent<PlayerManager>().health) / 100f;
+
     }
 
 }

@@ -14,7 +14,6 @@ public class NodeClass{
     {
         NIH = InstanceHandler;
         adjacents = new List<NodeClass>();
-
     }
 
     public int getOrder()
@@ -34,6 +33,7 @@ public class NodeClass{
 
     public void connect(NodeClass otherNode)
     {
+        //Connects two nodes together at both ends
         adjacents.Add(otherNode);
         otherNode.adjacents.Add(this);
         adjacents = adjacents.Distinct().ToList();
@@ -42,6 +42,7 @@ public class NodeClass{
 
     public void disconnect(NodeClass otherNode)
     {
+        //Disconnects nodes at both ends
         adjacents.Remove(otherNode);
         otherNode.adjacents.Remove(this);
         adjacents = adjacents.Distinct().ToList();
@@ -50,6 +51,7 @@ public class NodeClass{
 
     public static bool isCyclic(NodeClass from, List<NodeClass> path)
     {
+        //Recursive Algorithm to test whether a graph is cyclic by exploring paths from nodes and seeing if the root node can be found
         if (path.Contains(from))
         {
             return true;
@@ -75,11 +77,11 @@ public class NodeClass{
     }
 
     public static NodeClass nearestAvailable(NodeClass from, bool blue, bool orNeutral)
-
+    {
+        //Breadth first search using a queue to store adjacent nodes and marking nodes as 'visited'
         //Do not run if no remaining nodes
         //Validate this beforehand
-        //breadth first search
-    {
+
         Queue<NodeClass> q = new Queue<NodeClass>();
         Dictionary<NodeClass, bool> visited = new Dictionary<NodeClass, bool>();
 
@@ -89,7 +91,7 @@ public class NodeClass{
         }
         visited[from] = true;
         q.Enqueue(from);
-        while (q.Any())
+        while (q.Any()) //The queue is not empty
         {
             NodeClass node = q.Dequeue();
             visited[node] = true;
@@ -128,10 +130,11 @@ public class NodeClass{
                 }
             }
         }
-        return null;//should not be reached
+        return null; //should not be reached //necessary for syntax to 'guarantee' return
     }
 
     struct DjikstraBox{
+        //For use with Djikstra's Algorithm
         public float workingVal;
         public bool isFixed;
         public DjikstraBox(float workingVal, bool isFixed)
@@ -142,7 +145,9 @@ public class NodeClass{
     }
     public static NodeClass nextInDjikstras(NodeClass from, NodeClass to, bool blue)
     {
-        //setup
+        //Returns the node to traverse to when following Djikstra's Algorithm to reach another node
+
+        //Setup
         foreach(GameObject obj in GameController.NodeArray)
         {
             if (blue)
@@ -174,9 +179,10 @@ public class NodeClass{
             values.Add(tempObj.GetComponent<NodeInstanceHandler>().node, new DjikstraBox(99, false));
         }
 
-        //calculate
+        //Calculation
         values[from] = new DjikstraBox(0, true);
         NodeClass lastAdded = from;
+        //Find easiest node to traverse to at each point
         while (!values[to].isFixed)
         {
             foreach (NodeClass node in lastAdded.adjacents)
@@ -190,7 +196,7 @@ public class NodeClass{
             values[lastAdded] = new DjikstraBox(values[lastAdded].workingVal, true);
         }
 
-        //retrace
+        //Retrace until the next node is the start node
         NodeClass traceFrom;
         NodeClass traceNext = to;
         do

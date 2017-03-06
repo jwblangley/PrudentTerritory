@@ -18,6 +18,7 @@ public class LightPulse : MonoBehaviour
     //Update is called once per frame
     void Update()
     {
+        //Pulse the light
         glowLight.range = Mathf.PingPong(timer * speed, maxDist);
         timer += Time.deltaTime;
     }

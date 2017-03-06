@@ -2,8 +2,8 @@
 using System.Collections;
 
 public class NodeInstanceHandler : MonoBehaviour {
+    //Handles the gameobject instance of a node for rendering
 
-    // Use this for initialization
     Rigidbody rb;
     public Material neutralMaterial, redMaterial, blueMaterial;
     public NodeClass node;
@@ -17,7 +17,7 @@ public class NodeInstanceHandler : MonoBehaviour {
 	void Start () {
         rb = GetComponent<Rigidbody>();
         rb.angularVelocity = Random.onUnitSphere * 3;
-        
+
 	}
 	public void setBlue()
     {
@@ -31,8 +31,4 @@ public class NodeInstanceHandler : MonoBehaviour {
         node.isBlue = false;
         node.isNeutral = false;
     }
-    // Update is called once per frame
-    void Update () {
-	
-	}
 }
